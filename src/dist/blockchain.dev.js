@@ -105,38 +105,60 @@ function () {
     value: function _addBlock(block) {
       var self = this;
       return new Promise(function _callee(resolve, reject) {
-        var hash;
+        var currentHeight, previousBlock, validationErrors;
         return regeneratorRuntime.async(function _callee$(_context2) {
           while (1) {
             switch (_context2.prev = _context2.next) {
               case 0:
-                block.height = self.height + 1;
-                block.previousBlockHash = self.height !== -1 ? self.height : null;
-                block.time = new Date().getTime().toString().slice(0, -3);
-                hash = SHA256(block.height + block.body + block.time + block.previousBlockHash).toString();
+                _context2.next = 2;
+                return regeneratorRuntime.awrap(self.getChainHeight());
 
-                if (hash !== "") {
-                  block.hash = hash;
+              case 2:
+                currentHeight = _context2.sent;
+
+                if (!(currentHeight > -1)) {
+                  _context2.next = 8;
+                  break;
+                }
+
+                _context2.next = 6;
+                return regeneratorRuntime.awrap(self.getBlockByHeight(currentHeight));
+
+              case 6:
+                previousBlock = _context2.sent;
+                block.previousBlockHash = previousBlock.hash;
+
+              case 8:
+                block.time = new Date().getTime().toString().slice(0, -3);
+                _context2.next = 11;
+                return regeneratorRuntime.awrap(self.validateChain());
+
+              case 11:
+                validationErrors = _context2.sent;
+
+                if (!validationErrors.length) {
+                  block.height = currentHeight + 1;
+                  block.hash = SHA256(JSON.stringify(block)).toString();
                   self.chain.push(block);
                   self.height++;
                   resolve(block);
                 } else {
-                  reject("Error. Unable to hash the block. Block NOT saved.");
+                  reject({
+                    message: "Blockchain is invalid!",
+                    error: validationErrors,
+                    status: false
+                  });
                 }
 
-              case 5:
+              case 13:
               case "end":
                 return _context2.stop();
             }
           }
         });
-      }); // {
-      //     this.hash = null;                                           // Hash of the block
-      //     this.height = 0;                                            // Block Height (consecutive number of each block)
-      //     this.body = "{data: 'Genesis Block'}"
-      //     this.time = 0;                                              // Timestamp for the Block creation
-      //     this.previousBlockHash = null;                              // Reference to the previous Block Hash
-      // }
+      })["catch"](function (error) {
+        console.error(error);
+      });
     }
     /**
      * The requestMessageOwnershipVerification(address) method
@@ -184,38 +206,40 @@ function () {
             switch (_context3.prev = _context3.next) {
               case 0:
                 time = parseInt(message.split(':')[1]);
-                currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
+                currentTime = parseInt(new Date().getTime().toString().slice(0, -3)); //if (time >= currentTime - 300000 && time <= currentTime) {
 
-                if (!(time >= currentTime - 300000 && time <= currentTime)) {
-                  _context3.next = 11;
+                if (!(currentTime - time <= 300)) {
+                  _context3.next = 10;
                   break;
                 }
 
                 // FIXME: enabling verification: error using adresses from my bitcoin core
                 // if (bitcoinMessage.verify(message, address, signature)) {
-                block = new BlockClass.Block(star);
-                block.address = address;
-                _context3.next = 7;
+                block = new BlockClass.Block(star); //block.address = address;
+
+                _context3.next = 6;
                 return regeneratorRuntime.awrap(self._addBlock(block));
 
-              case 7:
+              case 6:
                 block = _context3.sent;
                 resolve(block); // } else {
                 //     reject("bitcoin Message verification failed")
                 // }
 
-                _context3.next = 12;
+                _context3.next = 11;
                 break;
 
-              case 11:
+              case 10:
                 reject("time elapsed not respected");
 
-              case 12:
+              case 11:
               case "end":
                 return _context3.stop();
             }
           }
         });
+      })["catch"](function (error) {
+        console.error(error);
       });
     }
     /**
@@ -300,28 +324,110 @@ function () {
       var self = this;
       var errorLog = [];
       return new Promise(function _callee3(resolve, reject) {
+        var _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, block, currentBlockHeight, previousBlock;
+
         return regeneratorRuntime.async(function _callee3$(_context4) {
           while (1) {
             switch (_context4.prev = _context4.next) {
               case 0:
-                errorLog = self.chain.map(function (block) {
-                  return {
-                    hash: block.hash,
-                    isValid: SHA256(block.height + block.body + block.time + block.previousBlockHash).toString() === block.hash // FIXME: didnt find a way to cast the obj to Block Class.
+                _iteratorNormalCompletion = true;
+                _didIteratorError = false;
+                _iteratorError = undefined;
+                _context4.prev = 3;
+                _iterator = self.chain[Symbol.iterator]();
 
-                  };
-                }).filter(function (b) {
-                  return !b.isValid;
-                });
+              case 5:
+                if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
+                  _context4.next = 22;
+                  break;
+                }
+
+                block = _step.value;
+                _context4.next = 9;
+                return regeneratorRuntime.awrap(block.validate());
+
+              case 9:
+                if (!_context4.sent) {
+                  _context4.next = 18;
+                  break;
+                }
+
+                currentBlockHeight = block.height; // check then if previous block hash is equal to current block value of "previousBlockHash"
+
+                if (!(currentBlockHeight > 0)) {
+                  _context4.next = 16;
+                  break;
+                }
+
+                _context4.next = 14;
+                return regeneratorRuntime.awrap(self.getBlockByHeight(currentBlockHeight - 1));
+
+              case 14:
+                previousBlock = _context4.sent;
+
+                if (previousBlock.hash !== block.previousBlockHash) {
+                  errorLog.push(new Error("Blockchain broken! Invalid link bt Block ".concat(block.currentBlockHeight, " and Block ").concat(currentBlockHeight - 1)));
+                }
+
+              case 16:
+                _context4.next = 19;
+                break;
+
+              case 18:
+                errorLog.push(new Error("Block ".concat(block.height, " invalid.")));
+
+              case 19:
+                _iteratorNormalCompletion = true;
+                _context4.next = 5;
+                break;
+
+              case 22:
+                _context4.next = 28;
+                break;
+
+              case 24:
+                _context4.prev = 24;
+                _context4.t0 = _context4["catch"](3);
+                _didIteratorError = true;
+                _iteratorError = _context4.t0;
+
+              case 28:
+                _context4.prev = 28;
+                _context4.prev = 29;
+
+                if (!_iteratorNormalCompletion && _iterator["return"] != null) {
+                  _iterator["return"]();
+                }
+
+              case 31:
+                _context4.prev = 31;
+
+                if (!_didIteratorError) {
+                  _context4.next = 34;
+                  break;
+                }
+
+                throw _iteratorError;
+
+              case 34:
+                return _context4.finish(31);
+
+              case 35:
+                return _context4.finish(28);
+
+              case 36:
                 resolve(errorLog);
 
-              case 2:
+              case 37:
               case "end":
                 return _context4.stop();
             }
           }
-        });
+        }, null, null, [[3, 24, 28, 36], [29,, 31, 35]]);
+      })["catch"](function (error) {
+        console.error(error);
       });
+      ;
     }
   }]);
 

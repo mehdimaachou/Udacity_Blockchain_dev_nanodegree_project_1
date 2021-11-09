@@ -44,8 +44,8 @@ class Block {
             // Returning the Block is not valid
             // Returning the Block is valid
             
-            let currentHash = SHA256(self.height + self.body + self.time + self.previousBlockHash);
-            if (currentHash === self.hash) {
+            let calculateHash = SHA256(JSON.stringify({ ...JSON.parse(JSON.stringify(self)), hash: null })).toString();
+            if (calculateHash === self.hash) {
                 resolve(true);
             } else {
                 reject(false);

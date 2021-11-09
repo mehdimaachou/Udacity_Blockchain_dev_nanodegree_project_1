@@ -65,29 +65,26 @@ class Blockchain {
     _addBlock (block) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            block.height = self.height + 1;
-            block.previousBlockHash = (self.height !== -1) ? self.height : null;
-            block.time = new Date().getTime().toString().slice(0, -3);
-            let hash = SHA256(block.height + block.body + block.time + block.previousBlockHash).toString();
-            if (hash !== "") {
-                block.hash = hash;
+            const currentHeight = await self.getChainHeight();
+            if (currentHeight > -1) {
+                let previousBlock = await self.getBlockByHeight(currentHeight);
+                block.previousBlockHash = previousBlock.hash;
+            }
+            block.time = new Date().getTime().toString().slice(0, -3)
+
+            let validationErrors = await self.validateChain();
+            if (!validationErrors.length) {
+                block.height = currentHeight + 1;
+                block.hash = SHA256(JSON.stringify(block)).toString();
                 self.chain.push(block);
                 self.height++;
                 resolve(block);
             } else {
-                reject("Error. Unable to hash the block. Block NOT saved.");
+                reject({ message: "Blockchain is invalid!", error: validationErrors, status: false });
             }
+        }).catch(error => {
+            console.error(error)
         });
-
-
-
-        // {
-        //     this.hash = null;                                           // Hash of the block
-        //     this.height = 0;                                            // Block Height (consecutive number of each block)
-        //     this.body = "{data: 'Genesis Block'}"
-        //     this.time = 0;                                              // Timestamp for the Block creation
-        //     this.previousBlockHash = null;                              // Reference to the previous Block Hash
-        // }
     }
 
     /**
@@ -130,11 +127,12 @@ class Blockchain {
         return new Promise(async (resolve, reject) => {
             let time = parseInt(message.split(':')[1]);
             let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
-            if (time >= currentTime - 300000 && time <= currentTime) {
+            //if (time >= currentTime - 300000 && time <= currentTime) {
+            if (currentTime - time <= 300) {
                 // FIXME: enabling verification: error using adresses from my bitcoin core
                 // if (bitcoinMessage.verify(message, address, signature)) {
                 let block = new BlockClass.Block(star);
-                block.address = address;
+                //block.address = address;
                 block = await self._addBlock(block);
                 resolve(block);
                 // } else {
@@ -144,6 +142,8 @@ class Blockchain {
                 reject("time elapsed not respected")
             }
 
+        }).catch(error => {
+            console.error(error)
         });
     }
 
@@ -209,15 +209,26 @@ class Blockchain {
         let self = this;
         let errorLog = [];
         return new Promise(async (resolve, reject) => {
-            errorLog = self.chain.map(block => {
-                return {
-                    hash: block.hash,
-                    isValid: (SHA256(block.height + block.body + block.time + block.previousBlockHash ).toString() === block.hash) // FIXME: didnt find a way to cast the obj to Block Class.
+
+            for (let block of self.chain) {
+                // Check first if block is valid
+                if (await block.validate()) {
+                    let currentBlockHeight = block.height;
+                    // check then if previous block hash is equal to current block value of "previousBlockHash"
+                    if (currentBlockHeight > 0) {
+                        let previousBlock = await self.getBlockByHeight((currentBlockHeight - 1));
+                        if (previousBlock.hash !== block.previousBlockHash) {
+                            errorLog.push(new Error(`Blockchain broken! Invalid link bt Block ${block.currentBlockHeight} and Block ${currentBlockHeight - 1}`));
+                        }
+                    }
+                } else {
+                    errorLog.push(new Error(`Block ${block.height} invalid.`));
                 }
             }
-            ).filter(b => !b.isValid)
             resolve(errorLog);
-        });
+        }).catch(error => {
+            console.error(error)
+        });;
     }
 
 }
