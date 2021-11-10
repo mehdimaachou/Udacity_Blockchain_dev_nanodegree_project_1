@@ -131,7 +131,7 @@ class Blockchain {
             if (currentTime - time <= 300) {
                 // FIXME: enabling verification: error using adresses from my bitcoin core
                 // if (bitcoinMessage.verify(message, address, signature)) {
-                let block = new BlockClass.Block(star);
+                let block = new BlockClass.Block({ address: address, star: star });
                 //block.address = address;
                 block = await self._addBlock(block);
                 resolve(block);
@@ -191,11 +191,20 @@ class Blockchain {
     getStarsByWalletAddress (address) {
         let self = this;
         let stars = [];
-        return new Promise((resolve, reject) => {
-            self.chain
-                .filter(block => block.address === address)
-                .forEach(obj => stars.push({ owner: address, star: JSON.parse(hex2ascii(obj.body)) }))
-            resolve(stars);
+        return new Promise(async (resolve, reject) => {
+            for (const block of self.chain) {
+                if (block.height !== 0) {
+                    let blockData = await block.getBData();
+                    if (blockData.address === address) {
+                        stars.push(blockData);
+                    }
+                }
+            }
+
+            return (stars.length > 0) ? resolve(stars) : reject("No Stars attached to this address")
+
+        }).catch(error => {
+            console.error(error)
         });
     }
 
@@ -228,7 +237,7 @@ class Blockchain {
             resolve(errorLog);
         }).catch(error => {
             console.error(error)
-        });;
+        });
     }
 
 }

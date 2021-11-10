@@ -215,7 +215,10 @@ function () {
 
                 // FIXME: enabling verification: error using adresses from my bitcoin core
                 // if (bitcoinMessage.verify(message, address, signature)) {
-                block = new BlockClass.Block(star); //block.address = address;
+                block = new BlockClass.Block({
+                  address: address,
+                  star: star
+                }); //block.address = address;
 
                 _context3.next = 6;
                 return regeneratorRuntime.awrap(self._addBlock(block));
@@ -299,16 +302,92 @@ function () {
     value: function getStarsByWalletAddress(address) {
       var self = this;
       var stars = [];
-      return new Promise(function (resolve, reject) {
-        self.chain.filter(function (block) {
-          return block.address === address;
-        }).forEach(function (obj) {
-          return stars.push({
-            owner: address,
-            star: JSON.parse(hex2ascii(obj.body))
-          });
-        });
-        resolve(stars);
+      return new Promise(function _callee3(resolve, reject) {
+        var _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, block, blockData;
+
+        return regeneratorRuntime.async(function _callee3$(_context4) {
+          while (1) {
+            switch (_context4.prev = _context4.next) {
+              case 0:
+                _iteratorNormalCompletion = true;
+                _didIteratorError = false;
+                _iteratorError = undefined;
+                _context4.prev = 3;
+                _iterator = self.chain[Symbol.iterator]();
+
+              case 5:
+                if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
+                  _context4.next = 15;
+                  break;
+                }
+
+                block = _step.value;
+
+                if (!(block.height !== 0)) {
+                  _context4.next = 12;
+                  break;
+                }
+
+                _context4.next = 10;
+                return regeneratorRuntime.awrap(block.getBData());
+
+              case 10:
+                blockData = _context4.sent;
+
+                if (blockData.address === address) {
+                  stars.push(blockData);
+                }
+
+              case 12:
+                _iteratorNormalCompletion = true;
+                _context4.next = 5;
+                break;
+
+              case 15:
+                _context4.next = 21;
+                break;
+
+              case 17:
+                _context4.prev = 17;
+                _context4.t0 = _context4["catch"](3);
+                _didIteratorError = true;
+                _iteratorError = _context4.t0;
+
+              case 21:
+                _context4.prev = 21;
+                _context4.prev = 22;
+
+                if (!_iteratorNormalCompletion && _iterator["return"] != null) {
+                  _iterator["return"]();
+                }
+
+              case 24:
+                _context4.prev = 24;
+
+                if (!_didIteratorError) {
+                  _context4.next = 27;
+                  break;
+                }
+
+                throw _iteratorError;
+
+              case 27:
+                return _context4.finish(24);
+
+              case 28:
+                return _context4.finish(21);
+
+              case 29:
+                return _context4.abrupt("return", stars.length > 0 ? resolve(stars) : reject("No Stars attached to this address"));
+
+              case 30:
+              case "end":
+                return _context4.stop();
+            }
+          }
+        }, null, null, [[3, 17, 21, 29], [22,, 24, 28]]);
+      })["catch"](function (error) {
+        console.error(error);
       });
     }
     /**
@@ -323,111 +402,110 @@ function () {
     value: function validateChain() {
       var self = this;
       var errorLog = [];
-      return new Promise(function _callee3(resolve, reject) {
-        var _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, block, currentBlockHeight, previousBlock;
+      return new Promise(function _callee4(resolve, reject) {
+        var _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, block, currentBlockHeight, previousBlock;
 
-        return regeneratorRuntime.async(function _callee3$(_context4) {
+        return regeneratorRuntime.async(function _callee4$(_context5) {
           while (1) {
-            switch (_context4.prev = _context4.next) {
+            switch (_context5.prev = _context5.next) {
               case 0:
-                _iteratorNormalCompletion = true;
-                _didIteratorError = false;
-                _iteratorError = undefined;
-                _context4.prev = 3;
-                _iterator = self.chain[Symbol.iterator]();
+                _iteratorNormalCompletion2 = true;
+                _didIteratorError2 = false;
+                _iteratorError2 = undefined;
+                _context5.prev = 3;
+                _iterator2 = self.chain[Symbol.iterator]();
 
               case 5:
-                if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                  _context4.next = 22;
+                if (_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done) {
+                  _context5.next = 22;
                   break;
                 }
 
-                block = _step.value;
-                _context4.next = 9;
+                block = _step2.value;
+                _context5.next = 9;
                 return regeneratorRuntime.awrap(block.validate());
 
               case 9:
-                if (!_context4.sent) {
-                  _context4.next = 18;
+                if (!_context5.sent) {
+                  _context5.next = 18;
                   break;
                 }
 
                 currentBlockHeight = block.height; // check then if previous block hash is equal to current block value of "previousBlockHash"
 
                 if (!(currentBlockHeight > 0)) {
-                  _context4.next = 16;
+                  _context5.next = 16;
                   break;
                 }
 
-                _context4.next = 14;
+                _context5.next = 14;
                 return regeneratorRuntime.awrap(self.getBlockByHeight(currentBlockHeight - 1));
 
               case 14:
-                previousBlock = _context4.sent;
+                previousBlock = _context5.sent;
 
                 if (previousBlock.hash !== block.previousBlockHash) {
                   errorLog.push(new Error("Blockchain broken! Invalid link bt Block ".concat(block.currentBlockHeight, " and Block ").concat(currentBlockHeight - 1)));
                 }
 
               case 16:
-                _context4.next = 19;
+                _context5.next = 19;
                 break;
 
               case 18:
                 errorLog.push(new Error("Block ".concat(block.height, " invalid.")));
 
               case 19:
-                _iteratorNormalCompletion = true;
-                _context4.next = 5;
+                _iteratorNormalCompletion2 = true;
+                _context5.next = 5;
                 break;
 
               case 22:
-                _context4.next = 28;
+                _context5.next = 28;
                 break;
 
               case 24:
-                _context4.prev = 24;
-                _context4.t0 = _context4["catch"](3);
-                _didIteratorError = true;
-                _iteratorError = _context4.t0;
+                _context5.prev = 24;
+                _context5.t0 = _context5["catch"](3);
+                _didIteratorError2 = true;
+                _iteratorError2 = _context5.t0;
 
               case 28:
-                _context4.prev = 28;
-                _context4.prev = 29;
+                _context5.prev = 28;
+                _context5.prev = 29;
 
-                if (!_iteratorNormalCompletion && _iterator["return"] != null) {
-                  _iterator["return"]();
+                if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+                  _iterator2["return"]();
                 }
 
               case 31:
-                _context4.prev = 31;
+                _context5.prev = 31;
 
-                if (!_didIteratorError) {
-                  _context4.next = 34;
+                if (!_didIteratorError2) {
+                  _context5.next = 34;
                   break;
                 }
 
-                throw _iteratorError;
+                throw _iteratorError2;
 
               case 34:
-                return _context4.finish(31);
+                return _context5.finish(31);
 
               case 35:
-                return _context4.finish(28);
+                return _context5.finish(28);
 
               case 36:
                 resolve(errorLog);
 
               case 37:
               case "end":
-                return _context4.stop();
+                return _context5.stop();
             }
           }
         }, null, null, [[3, 24, 28, 36], [29,, 31, 35]]);
       })["catch"](function (error) {
         console.error(error);
       });
-      ;
     }
   }]);
 
